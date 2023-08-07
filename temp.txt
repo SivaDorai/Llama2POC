@@ -1,0 +1,118 @@
+vuus4fhg4lwvsy3eqbi5csfkxqt7azp6oqitdwetnvrhltu5anqq
+siva.dorai76
+git remote add origin https://sivadorai76@dev.azure.com/sivadorai76/MLFlow_Test/_git/MLFlow_Test
+git push -u origin --all
+
+https://github.com/abetlen/llama-cpp-python/blob/main/docs/install/macos.md
+https://github.com/mrdbourke/pytorch-apple-silicon
+
+def load_llm_from_repo():
+    # Load the locally downloaded model here
+    model_repo = 'daryl149/llama-2-7b-chat-hf'
+    tokenizer = AutoTokenizer.from_pretrained(model_repo)
+    device_map = {
+        "transformer.word_embeddings": 0,
+        "transformer.word_embeddings_layernorm": 0,
+        "lm_head": "cpu",
+        "transformer.h": 0,
+        "transformer.ln_f": 0,
+    }
+    model = AutoModelForCausalLM.from_pretrained(
+        model_repo,
+        load_in_4bit=True,
+        device_map=device_map,
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        trust_remote_code=True,
+        llm_int8_enable_fp32_cpu_offload=True
+        #load_in_8bit_fp32_cpu_offload = True
+    )
+
+    pipe = pipeline(
+        task="text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        pad_token_id=tokenizer.eos_token_id,
+        max_length=2048,
+        temperature=0.5,
+        top_p=.95,
+        repetition_penalty=1.15
+    )
+
+#Loading the model
+    llm = HuggingFacePipeline(pipeline=pipe)
+    return llm
+def load_llm():
+    llm = Llama(model_path="./models/llama-2-7b-chat.ggmlv3.q8_0.bin", rms_norm_eps=1e-5)
+
+    cache = LlamaRAMCache(capacity_bytes=2 << 30)
+
+    llm.set_cache(cache)
+    return llm
+
+@cl.on_message
+async def main(message):
+    chain = cl.user_session.get("chain")
+    cb = cl.AsyncLangchainCallbackHandler(
+        stream_final_answer=True, answer_prefix_tokens=["FINAL", "ANSWER"]
+    )
+    cb.answer_reached = True
+    res = await chain.acall(message, callbacks=[cb])
+    answer = res["result"]
+    sources = res["source_documents"]
+
+    if sources:
+        answer += f"\nSources:" + str(sources)
+    else:
+        answer += "\nNo sources found"
+
+    await cl.Message(content=answer).send()
+
+#chainlit code
+@cl.on_chat_start
+async def start():
+    chain = qa_bot()
+    msg = cl.Message(content="Starting the bot...")
+    await msg.send()
+    msg.content = "Hi, Welcome ! What is your query?"
+    await msg.update()
+
+    cl.user_session.set("chain", chain)
+
+
+    """
+    custom_prompt_template = Use the following pieces of information to answer the user's question concisely in 2-3 sentence.
+    If you don't know the answer, just say that you don't know, don't try to make up an answer or hallucinate.
+    Context:{context}
+    Question: {question}
+
+    Only return the helpful answer below and nothing else.
+    Helpful answer:
+    """
+
+
+
+    # Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize input features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Build a feedforward neural network model
+model = Sequential()
+model.add(Dense(32, input_dim=num_features, activation='relu'))
+model.add(Dense(16, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+
+# Compile the model
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+model.fit(X_train_scaled, y_train, epochs=10, batch_size=32, validation_split=0.2)
+
+# Evaluate the model on test data
+loss, accuracy = model.evaluate(X_test_scaled, y_test)
+print(f"Test Loss: {loss:.4f}")
+print(f"Test Accuracy: {accuracy:.4f}")
